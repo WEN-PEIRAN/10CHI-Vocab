@@ -1,88 +1,152 @@
-// The vocabulary list is now stored in vocab-data.js.
-// This file controls the flashcard app logic.
+// Flashcard app logic
+// Vocabulary is stored in vocab-data.js as `vocabulary`
 
 var shuffledVocabulary = [];
 var currentIndex = 0;
 
-var cardNumber = document.getElementById("cardNumber");
-var hanzi = document.getElementById("hanzi");
-var pinyin = document.getElementById("pinyin");
-var english = document.getElementById("english");
+// Grab elements (const is nice for elements that never change)
+const cardNumber = document.getElementById("cardNumber");
+const hanzi = document.getElementById("hanzi");
+const pinyin = document.getElementById("pinyin");
+const english = document.getElementById("english");
 
-var pinyinBox = document.getElementById("pinyinBox");
-var englishBox = document.getElementById("englishBox");
+const pinyinBox = document.getElementById("pinyinBox");
+const englishBox = document.getElementById("englishBox");
 
-var showPinyinBtn = document.getElementById("showPinyinBtn");
-var showEnglishBtn = document.getElementById("showEnglishBtn");
-var prevBtn = document.getElementById("prevBtn");
-var nextBtn = document.getElementById("nextBtn");
+const togglePinyinBtn = document.getElementById("togglePinyinBtn");
+const toggleEnglishBtn = document.getElementById("toggleEnglishBtn");
 
-// This function creates a random order for the vocabulary cards.
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+
+const shuffleBtn = document.getElementById("shuffleBtn");
+const restartBtn = document.getElementById("restartBtn");
+
+// Helper: hide/show + accessibility attribute
+function setHidden(box, hidden) {
+  box.classList.toggle("hidden", hidden);
+  box.setAttribute("aria-hidden", hidden ? "true" : "false");
+}
+
 function shuffleVocabulary() {
-  shuffledVocabulary = vocabulary.slice();
+  // Safety: handle missing/empty vocabulary
+  if (!window.vocabulary || !Array.isArray(window.vocabulary) || window.vocabulary.length === 0) {
+    shuffledVocabulary = [];
+    return;
+  }
 
+  shuffledVocabulary = window.vocabulary.slice();
+
+  // Fisher–Yates shuffle
   for (var i = shuffledVocabulary.length - 1; i > 0; i--) {
     var randomIndex = Math.floor(Math.random() * (i + 1));
-
     var temporaryCard = shuffledVocabulary[i];
     shuffledVocabulary[i] = shuffledVocabulary[randomIndex];
     shuffledVocabulary[randomIndex] = temporaryCard;
   }
 }
 
+function showMissingDataMessage() {
+  cardNumber.textContent = "";
+  hanzi.textContent = "No vocabulary loaded";
+  pinyin.textContent = "Check vocab-data.js is linked correctly.";
+  english.textContent = "Make sure `vocabulary` is a non-empty array.";
+
+  setHidden(pinyinBox, false);
+  setHidden(englishBox, false);
+
+  togglePinyinBtn.disabled = true;
+  toggleEnglishBtn.disabled = true;
+  prevBtn.disabled = true;
+  nextBtn.disabled = true;
+  shuffleBtn.disabled = true;
+  restartBtn.disabled = true;
+}
+
 function showCard() {
+  if (shuffledVocabulary.length === 0) {
+    showMissingDataMessage();
+    return;
+  }
+
   var currentCard = shuffledVocabulary[currentIndex];
 
-  cardNumber.textContent = "Card " + (currentIndex + 1) + " of " + shuffledVocabulary.length;
+  cardNumber.textContent =
+    "Card " + (currentIndex + 1) + " of " + shuffledVocabulary.length;
+
   hanzi.textContent = currentCard.hanzi;
   pinyin.textContent = currentCard.pinyin;
   english.textContent = currentCard.english;
 
   // Hide answers whenever a new card appears
-  pinyinBox.classList.add("hidden");
-  englishBox.classList.add("hidden");
+  setHidden(pinyinBox, true);
+  setHidden(englishBox, true);
 
-  showPinyinBtn.textContent = "Reveal Pinyin";
-  showEnglishBtn.textContent = "Reveal English";
+  togglePinyinBtn.textContent = "Reveal Pinyin";
+  toggleEnglishBtn.textContent = "Reveal English";
 }
 
-function revealPinyin() {
-  pinyinBox.classList.remove("hidden");
-  showPinyinBtn.textContent = "Pinyin Revealed";
+function togglePinyin() {
+  var isHidden = pinyinBox.classList.contains("hidden");
+  setHidden(pinyinBox, !isHidden);
+  togglePinyinBtn.textContent = isHidden ? "Hide Pinyin" : "Reveal Pinyin";
 }
 
-function revealEnglish() {
-  englishBox.classList.remove("hidden");
-  showEnglishBtn.textContent = "English Revealed";
+function toggleEnglish() {
+  var isHidden = englishBox.classList.contains("hidden");
+  setHidden(englishBox, !isHidden);
+  toggleEnglishBtn.textContent = isHidden ? "Hide English" : "Reveal English";
 }
 
 function nextCard() {
-  currentIndex = currentIndex + 1;
+  if (shuffledVocabulary.length === 0) return;
 
+  currentIndex = currentIndex + 1;
   if (currentIndex >= shuffledVocabulary.length) {
     currentIndex = 0;
   }
-
   showCard();
 }
 
 function previousCard() {
-  currentIndex = currentIndex - 1;
+  if (shuffledVocabulary.length === 0) return;
 
+  currentIndex = currentIndex - 1;
   if (currentIndex < 0) {
     currentIndex = shuffledVocabulary.length - 1;
   }
-
   showCard();
 }
 
-showPinyinBtn.addEventListener("click", revealPinyin);
-showEnglishBtn.addEventListener("click", revealEnglish);
+function shuffleDeck() {
+  shuffleVocabulary();
+  currentIndex = 0;
+  showCard();
+}
+
+function restartDeck() {
+  currentIndex = 0;
+  showCard();
+}
+
+// Button events
+togglePinyinBtn.addEventListener("click", togglePinyin);
+toggleEnglishBtn.addEventListener("click", toggleEnglish);
+
 nextBtn.addEventListener("click", nextCard);
 prevBtn.addEventListener("click", previousCard);
 
-// Shuffle the cards when the app first loads
-shuffleVocabulary();
+shuffleBtn.addEventListener("click", shuffleDeck);
+restartBtn.addEventListener("click", restartDeck);
 
-// Show the first card when the app loads
+// Keyboard shortcuts for class/projector use
+document.addEventListener("keydown", function (event) {
+  if (event.key === "ArrowRight") nextCard();
+  if (event.key === "ArrowLeft") previousCard();
+  if (event.key === "p" || event.key === "P") togglePinyin();
+  if (event.key === "e" || event.key === "E") toggleEnglish();
+});
+
+// Start up
+shuffleVocabulary();
 showCard();
